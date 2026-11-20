@@ -1,0 +1,5 @@
+profile,measured_winner,measured_ms,model_winner,model_ms
+bw100_d100,full_local,55.9,full_local,59.7
+bw100_d20,full_local,61.2,full_local,59.7
+bw10_d100,full_local,58.1,full_local,59.7
+bw10_d20,full_local,69.9,full_local,59.7

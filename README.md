@@ -137,7 +137,7 @@ filter `tcp port 50051`, or the built-in `pktmon start --capture --pkt-size 128`
 
 ### Draft results on one machine
 
-`results/simulated/` holds a full-matrix run with client and server on one CPU-only host over
+`results/simulated/` holds a full-matrix run (findings in `results/simulated/README.md`) with client and server on one CPU-only host over
 loopback with app-level shaping and random weights. It is **simulated**: server compute is a
 CPU, not the RTX 4060. Regenerate it with:
 
@@ -145,7 +145,8 @@ CPU, not the RTX 4060. Regenerate it with:
 python -m splitbench.server --host 127.0.0.1 --port 50061 --no-pretrained --device cpu --threads 2
 python scripts\run_matrix.py --config configs\simulated_single_machine.yaml --shaper app --frames none `
     --out results\simulated\raw.csv -- --threads 2 --port 50061 --no-pretrained
-python analysis\analyze.py --raw results\simulated\raw*.csv --outdir results\simulated --label "SIMULATED: one CPU host, app-level link"
+python analysis\analyze.py --raw "results\simulated\raw*.csv" --outdir results\simulated --server-speedup 15 `
+    --label "SIMULATED: one CPU host over loopback, app-level link (not the two-laptop testbed)"
 ```
 
 ### Ubuntu live USB path (optional, edge only)

@@ -81,19 +81,21 @@ def fig_payload(s: pd.DataFrame, out: Path, label: str) -> None:
     y = np.arange(len(p))[::-1]
     ax.barh(y, p.values / 1e3, height=0.6, color=[PALETTE[1] if c == "full_offload" else PALETTE[0] for c in p.index])
     for yi, (c, b) in zip(y, p.items()):
-        ax.text(b / 1e3 * 1.08, yi, f"{b/1e3:,.0f} KB  ({b/raw:.1f}x raw)" if c != "full_offload" else f"{b/1e3:,.0f} KB  raw uint8 frame",
+        ax.text(b / 1e3 + p.max() / 1e3 * 0.015, yi, f"{b/1e3:,.0f} KB  ({b/raw:.1f}x raw)" if c != "full_offload" else f"{b/1e3:,.0f} KB  raw uint8 frame",
                 va="center", fontsize=9, color=INK)
     ax.set_yticks(y, [c.replace("_", " ") for c in p.index])
-    ax.set_xscale("log"); ax.set_xlim(right=p.max() / 1e3 * 8)
-    ax.set_xlabel("Bytes sent per request (KB, log scale)", color=INK)
+    ax.set_xlim(0, p.max() / 1e3 * 1.4)
+    ax.set_xlabel("Bytes sent per request (KB)", color=INK)
     style(ax)
     ax.set_title(f"Every lossless split sends more than the raw frame\n{label}", loc="left", fontsize=11, color=INK)
     fig.tight_layout(); fig.savefig(out / "fig1_payload.png", dpi=200); plt.close(fig)
 
 
-def fig_crossover(s: pd.DataFrame, out: Path, label: str) -> pd.DataFrame:
+def fig_crossover(s: pd.DataFrame, out: Path, label: str, speedup: float = 1.0,
+                  fname: str = "fig2_crossover.png") -> pd.DataFrame:
     per = s.groupby("config").agg(edge=("edge_compute_ms_p50", "median"), ser=("serialize_ms_p50", "median"),
                                   srv=("server_total_ms_p50", "median"), payload_bytes=("payload_bytes", "median"))
+    per["srv"] = per.srv / speedup
     names = [c for c in CONFIG_ORDER if c in per.index] + [c for c in per.index if c not in CONFIG_ORDER]
     bws, rtts = np.logspace(0, 2, 200), np.linspace(5, 150, 200)
     B, R = np.meshgrid(bws, rtts)
@@ -105,8 +107,8 @@ def fig_crossover(s: pd.DataFrame, out: Path, label: str) -> pd.DataFrame:
     fig, ax = plt.subplots(figsize=(7.5, 5))
     ax.pcolormesh(bws, rtts, win, cmap=cmap, vmin=-0.5, vmax=len(names) - 0.5, shading="auto", alpha=0.35, linewidth=0)
     ax.contour(bws, rtts, win, levels=np.arange(len(names)) + 0.5, colors=INK, linewidths=0.8)
-    # measured cells
-    meas = s.loc[s.groupby("profile").e2e_ms_p50.idxmin()]
+    # measured cells (only meaningful when the model uses the measured server time)
+    meas = s.loc[s.groupby("profile").e2e_ms_p50.idxmin()] if speedup == 1 else s.iloc[0:0]
     for _, r in meas.iterrows():
         ax.scatter(r.rate_mbit, r.rtt_ms, s=90, color=color_of(r.config), edgecolor="white", linewidth=2, zorder=3)
         ax.annotate(f"measured: {r.config.replace('_', ' ')}\n{r.e2e_ms_p50:.0f} ms", (r.rate_mbit, r.rtt_ms),
@@ -117,7 +119,7 @@ def fig_crossover(s: pd.DataFrame, out: Path, label: str) -> pd.DataFrame:
     ax.set_xscale("log"); ax.set_xlabel("Uplink bandwidth (Mbit/s, log scale)", color=INK)
     ax.set_ylabel("Round-trip time (ms)", color=INK); style(ax); ax.grid(False)
     ax.set_title(f"Fastest strategy by bandwidth and RTT\n{label}", loc="left", fontsize=11, color=INK)
-    fig.tight_layout(); fig.savefig(out / "fig2_crossover.png", dpi=200); plt.close(fig)
+    fig.tight_layout(); fig.savefig(out / fname, dpi=200); plt.close(fig)
     # model check on measured cells
     chk = []
     for prof, g in s.groupby("profile"):
@@ -131,7 +133,7 @@ def fig_crossover(s: pd.DataFrame, out: Path, label: str) -> pd.DataFrame:
 
 def fig_stages(s: pd.DataFrame, out: Path, label: str) -> None:
     profs = s.drop_duplicates("profile").sort_values(["rate_mbit", "rtt_ms"]).profile.tolist()
-    fig, axes = plt.subplots(len(profs), 1, figsize=(7.5, 1.9 * len(profs) + 0.8), sharex=True)
+    fig, axes = plt.subplots(len(profs), 1, figsize=(7.5, 1.9 * len(profs) + 0.8), sharex=False)
     axes = np.atleast_1d(axes)
     for ax, prof in zip(axes, profs):
         g = s[s.profile == prof].set_index("config")
@@ -143,13 +145,13 @@ def fig_stages(s: pd.DataFrame, out: Path, label: str) -> None:
             ax.barh(y, v, left=left, height=0.62, color=PALETTE[i], label=name, edgecolor="white", linewidth=1)
             left += v
         for yi, tot in zip(y, g.e2e_ms_p50.values):
-            ax.text(tot * 1.12, yi, f"{tot:,.0f} ms", va="center", fontsize=8, color=INK)
+            ax.text(tot + g.e2e_ms_p50.max() * 0.015, yi, f"{tot:,.0f} ms", va="center", fontsize=8, color=INK)
         ax.set_yticks(y, [c.replace("_", " ") for c in g.index], fontsize=8)
         bw, rtt = parse_profile(prof)
         ax.set_title(f"{bw:g} Mbit/s, {rtt:g} ms RTT", loc="left", fontsize=9, color=INK)
-        ax.set_xscale("symlog", linthresh=10); style(ax)
-    axes[-1].set_xlabel("Median latency per request (ms, symlog scale)", color=INK)
-    axes[0].legend(loc="lower right", bbox_to_anchor=(1, 1.25), ncol=4, fontsize=8, frameon=False)
+        ax.set_xlim(0, g.e2e_ms_p50.max() * 1.15); style(ax)
+    axes[-1].set_xlabel("Median latency per request (ms; each panel has its own scale)", color=INK)
+    axes[0].legend(loc="lower right", bbox_to_anchor=(1, 1.12), ncol=4, fontsize=8, frameon=False)
     fig.suptitle(f"Where the time goes\n{label}", x=0.02, ha="left", fontsize=11, color=INK)
     fig.tight_layout(); fig.savefig(out / "fig3_stages.png", dpi=200); plt.close(fig)
 
@@ -178,6 +180,9 @@ def main() -> None:
     ap.add_argument("--raw", nargs="+", default=["results/raw.csv"])
     ap.add_argument("--outdir", default="results")
     ap.add_argument("--label", default="two-laptop testbed")
+    ap.add_argument("--server-speedup", type=float, default=0,
+                    help="what-if: also draw the map with server time divided by this factor "
+                         "(e.g. a GPU estimate when the run used a CPU server); writes fig2b_*.png")
     a = ap.parse_args()
     out = Path(a.outdir); out.mkdir(parents=True, exist_ok=True)
     files = [f for pat in a.raw for f in sorted(glob.glob(pat))]
@@ -186,6 +191,9 @@ def main() -> None:
     fig_payload(s, out, a.label)
     chk = fig_crossover(s, out, a.label)
     chk.to_csv(out / "winners.csv", index=False)
+    if a.server_speedup:
+        fig_crossover(s, out, f"WHAT-IF: server time / {a.server_speedup:g} (assumed GPU speedup, not measured)\n{a.label}",
+                      a.server_speedup, f"fig2b_crossover_server_x{a.server_speedup:g}.png")
     fig_stages(s, out, a.label)
     fig_tail(s, out, a.label)
     cols = ["config", "profile", "n", "payload_bytes", "edge_compute_ms_p50", "network_ms_p50", "e2e_ms_p50", "e2e_ms_p99"]
