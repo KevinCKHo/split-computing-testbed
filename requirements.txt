@@ -1,0 +1,9 @@
+# Install PyTorch first with the CUDA build that matches the server
+# (see https://pytorch.org/get-started/locally/); the edge laptop can use the CPU build.
+torch>=2.2
+torchvision>=0.17
+numpy>=1.26
+pandas>=2.1
+matplotlib>=3.8
+pyyaml>=6.0
+pytest>=8.0

@@ -1,0 +1,31 @@
+# Minimum viable study matrix. Edit here, not in code.
+model: resnet50
+pretrained: true          # torchvision ImageNet weights, no fine-tuning
+input_size: 224
+num_frames: 200           # N measured requests per (config x profile)
+warmup: 20
+payload_dtype: float32    # float32 = lossless (proposal default); float16 is an optional variant
+
+server:
+  host: 192.168.50.2      # RTX 4060 laptop on the dedicated link
+  port: 50051
+
+edge:
+  iface: enp0s31f6        # edge NIC facing the server; check with `ip -br link`
+  torch_threads: 4
+
+# Configurations. "split" names the last module that runs on the edge.
+configs:
+  - {name: full_local,   mode: local}
+  - {name: full_offload, mode: offload}
+  - {name: split_A_early, mode: split, split: layer1}
+  - {name: split_B_mid,   mode: split, split: layer2}
+  - {name: split_C_late,  mode: split, split: layer3}
+  # - {name: split_D_layer4, mode: split, split: layer4}   # optional extra late point
+
+# Network profiles (MVS: 2 x 2). delay_ms is one-way, added on edge egress.
+profiles:
+  - {name: bw10_d20,   rate_mbit: 10,  delay_ms: 20}
+  - {name: bw10_d100,  rate_mbit: 10,  delay_ms: 100}
+  - {name: bw100_d20,  rate_mbit: 100, delay_ms: 20}
+  - {name: bw100_d100, rate_mbit: 100, delay_ms: 100}

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+# Experiment data and outputs (keep folders, not contents)
+data/*
+!data/.gitkeep
+results/*
+!results/.gitkeep
+!results/simulated/
+results/simulated/*.log
+*.pcap
+*.pcapng
+*.etl
+# Model weights cache
+*.pth
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
