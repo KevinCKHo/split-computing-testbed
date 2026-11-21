@@ -3,9 +3,11 @@
     python analysis/analyze.py --raw results/raw.csv --outdir results/ [--label "two-laptop testbed"]
 
 Inputs : one or more raw CSVs from splitbench.client (glob allowed), profile names like bw10_d20
-         (rate in Mbit/s, one-way delay in ms; emulated RTT = 2 x delay).
+         = 10 Mbit/s uplink, 20 ms ONE-WAY delay applied in each direction -> 40 ms emulated RTT
+         (the physical link's own RTT comes on top; measure it with the unshaped baseline).
 Outputs: summary.csv            n, payload, median of each stage, p95/p99 end-to-end
          winners.csv            fastest configuration per measured profile (by median)
+         next_measurements.csv  bandwidth/RTT points on the modelled crossover boundary: measure these next
          fig1_payload.png       Deliverable 1: bytes on the wire per configuration
          fig2_crossover.png     Deliverable 2: fastest strategy over 1-100 Mbit/s x 5-150 ms RTT,
                                 modelled from measured medians, with measured winners overlaid
@@ -50,8 +52,18 @@ def style(ax) -> None:
 
 
 def parse_profile(name: str) -> tuple[float, float]:
+    """'bw10_d20' -> (10 Mbit/s, 40 ms emulated RTT). d = ONE-WAY delay, paid each way."""
     m = re.match(r"bw([\d.]+)_d([\d.]+)", name)
     return (float(m.group(1)), 2 * float(m.group(2))) if m else (np.nan, np.nan)
+
+
+def p99_ci(x: pd.Series, reps: int = 2000, seed: int = 0) -> tuple[float, float]:
+    """95 % bootstrap interval for the p99. With N = 200 the p99 rests on the top 2 samples,
+    so treat it as indicative unless the interval is narrow."""
+    v = x.to_numpy()
+    rng = np.random.default_rng(seed)
+    q = np.quantile(rng.choice(v, size=(reps, len(v)), replace=True), 0.99, axis=1)
+    return float(np.quantile(q, 0.025)), float(np.quantile(q, 0.975))
 
 
 def summarize(df: pd.DataFrame) -> pd.DataFrame:
@@ -62,7 +74,11 @@ def summarize(df: pd.DataFrame) -> pd.DataFrame:
         e2e_ms_p50=("e2e_ms", "median"),
         e2e_ms_p95=("e2e_ms", lambda s: s.quantile(0.95)),
         e2e_ms_p99=("e2e_ms", lambda s: s.quantile(0.99))).reset_index()
+    ci = df.groupby(["config", "profile"]).e2e_ms.apply(p99_ci)
+    agg["e2e_ms_p99_ci_lo"] = [ci.loc[(c, p)][0] for c, p in zip(agg.config, agg.profile)]
+    agg["e2e_ms_p99_ci_hi"] = [ci.loc[(c, p)][1] for c, p in zip(agg.config, agg.profile)]
     agg[["rate_mbit", "rtt_ms"]] = agg.profile.apply(lambda p: pd.Series(parse_profile(p)))
+    agg["one_way_delay_ms"] = agg.rtt_ms / 2
     agg["order"] = agg.config.map(lambda c: CONFIG_ORDER.index(c) if c in CONFIG_ORDER else 99)
     return agg.sort_values(["rate_mbit", "rtt_ms", "order"]).drop(columns="order")
 
@@ -117,9 +133,22 @@ def fig_crossover(s: pd.DataFrame, out: Path, label: str, speedup: float = 1.0,
     ax.legend(handles, [names[i].replace("_", " ") for i in present], title="Fastest (model)",
               loc="upper right", fontsize=8, title_fontsize=8, frameon=False)
     ax.set_xscale("log"); ax.set_xlabel("Uplink bandwidth (Mbit/s, log scale)", color=INK)
-    ax.set_ylabel("Round-trip time (ms)", color=INK); style(ax); ax.grid(False)
+    ax.set_ylabel("Emulated round-trip time (ms) = 2 x one-way delay", color=INK); style(ax); ax.grid(False)
     ax.set_title(f"Fastest strategy by bandwidth and RTT\n{label}", loc="left", fontsize=11, color=INK)
     fig.tight_layout(); fig.savefig(out / fname, dpi=200); plt.close(fig)
+    # where to measure next: grid points on the modelled boundary between winners
+    if speedup == 1:
+        edge_mask = np.zeros_like(win, dtype=bool)
+        edge_mask[:, 1:] |= win[:, 1:] != win[:, :-1]
+        edge_mask[1:, :] |= win[1:, :] != win[:-1, :]
+        ii, jj = np.nonzero(edge_mask)
+        pts = pd.DataFrame({"rate_mbit": bws[jj].round(1), "rtt_ms": rtts[ii].round(0),
+                            "winner_left_or_below": [names[win[i, max(j - 1, 0)]] for i, j in zip(ii, jj)],
+                            "winner_here": [names[win[i, j]] for i, j in zip(ii, jj)]})
+        if len(pts):
+            pts = pts.iloc[np.linspace(0, len(pts) - 1, min(12, len(pts))).astype(int)]
+        pts["one_way_delay_ms"] = pts.rtt_ms / 2
+        pts.to_csv(out / "next_measurements.csv", index=False)
     # model check on measured cells
     chk = []
     for prof, g in s.groupby("profile"):
@@ -148,7 +177,7 @@ def fig_stages(s: pd.DataFrame, out: Path, label: str) -> None:
             ax.text(tot + g.e2e_ms_p50.max() * 0.015, yi, f"{tot:,.0f} ms", va="center", fontsize=8, color=INK)
         ax.set_yticks(y, [c.replace("_", " ") for c in g.index], fontsize=8)
         bw, rtt = parse_profile(prof)
-        ax.set_title(f"{bw:g} Mbit/s, {rtt:g} ms RTT", loc="left", fontsize=9, color=INK)
+        ax.set_title(f"{bw:g} Mbit/s, {rtt / 2:g} ms one-way delay each way = {rtt:g} ms emulated RTT", loc="left", fontsize=9, color=INK)
         ax.set_xlim(0, g.e2e_ms_p50.max() * 1.15); style(ax)
     axes[-1].set_xlabel("Median latency per request (ms; each panel has its own scale)", color=INK)
     axes[0].legend(loc="lower right", bbox_to_anchor=(1, 1.12), ncol=4, fontsize=8, frameon=False)

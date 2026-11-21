@@ -21,7 +21,7 @@ two tables in Section 3 from `results/summary.csv`.
 | 3. At least one preliminary result; what it shows and does not establish | §3: payload table, latency table, Figure 1, "What it shows", "What it does not yet establish" | Done (simulated, labeled) |
 | 4. Challenges, blockers, open questions, risks | §4 risk table + open question | Done |
 | 5. Remaining tasks and realistic timeline to presentation and report | §5 timeline (Nov 21 – Dec 14) | Done |
-| 6. Evidence that proposal feedback was considered | §6 | **Needs Kevin**: placeholder for the instructor's feedback |
+| 6. Evidence that proposal feedback was considered | §6: each of the four feedback points with the response | Done |
 | 7. Contributions (two-person teams) | §7 | Individual project, one line |
 | ~2–3 pages | PDF is 3 pages + references | Done |
 | Cite external materials | References | Done (proposal refs 6 and 7 dropped: ref 7 reuses ref 4's DOI) |

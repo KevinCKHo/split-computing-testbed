@@ -18,7 +18,7 @@ NAMES = ["Full local", "Full offload", "Split A (layer1)", "Split B (layer2)", "
 INK, MUTED, GRID = "#1f1f1e", "#6b6a64", "#e4e3dd"
 
 s = pd.read_csv(sys.argv[1])
-profiles = [("bw10_d20", "10 Mbit/s, 40 ms RTT"), ("bw100_d20", "100 Mbit/s, 40 ms RTT")]
+profiles = [("bw10_d20", "10 Mbit/s, 20 ms one-way (40 ms RTT)"), ("bw100_d20", "100 Mbit/s, 20 ms one-way (40 ms RTT)")]
 fig, axes = plt.subplots(1, 2, figsize=(7.6, 2.5))
 for ax, (prof, title) in zip(axes, profiles):
     g = s[s.profile == prof].set_index("config").reindex(ORDER)

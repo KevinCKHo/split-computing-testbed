@@ -98,7 +98,8 @@ def main() -> None:
     ap.add_argument("--num-frames", type=int, default=0, help="override num_frames (measured requests per cell)")
     ap.add_argument("--warmup", type=int, default=-1, help="override warmup requests per cell")
     ap.add_argument("--rate-mbit", type=float, default=0.0, help="app-level uplink rate (0 = off)")
-    ap.add_argument("--delay-ms", type=float, default=0.0, help="app-level one-way delay, applied each way")
+    ap.add_argument("--delay-ms", type=float, default=0.0, help="app-level ONE-WAY propagation delay (ms), applied on the uplink and again on the "
+                         "downlink: emulated RTT = 2 x delay-ms, on top of the physical link's RTT")
     a = ap.parse_args()
     shaper = LinkShaper(a.rate_mbit, a.delay_ms)
 

@@ -23,7 +23,8 @@ configs:
   - {name: split_C_late,  mode: split, split: layer3}
   - {name: split_D_layer4, mode: split, split: layer4}   # extra late point (added after Proposal v2)
 
-# Network profiles (MVS: 2 x 2). delay_ms is one-way, added on edge egress.
+# Network profiles (MVS: 2 x 2). delay_ms = ONE-WAY propagation delay, applied in each
+# direction, so emulated RTT = 2 x delay_ms (40 ms and 200 ms) plus the physical link's RTT.
 profiles:
   - {name: bw10_d20,   rate_mbit: 10,  delay_ms: 20}
   - {name: bw10_d100,  rate_mbit: 10,  delay_ms: 100}

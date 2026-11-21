@@ -9,7 +9,7 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
 
 **Question (unchanged from Proposal v2).** For which combinations of uplink bandwidth (1–100 Mbit/s) and round-trip time (5–150 ms) does offloading an intermediate activation give lower end-to-end latency than full on-device inference or full raw-frame offloading, and which split point is most efficient?
 
-**Scope (unchanged).** One pretrained CNN backbone (torchvision ResNet-50, 224 × 224 input, no fine-tuning, no compression or distillation), point-to-point edge-to-server link, N = 200 measured requests per configuration, minimum viable matrix of 10 / 100 Mbit/s × 20 / 100 ms one-way delay (RTT 40 / 200 ms).
+**Scope (unchanged).** One pretrained CNN backbone (torchvision ResNet-50, 224 × 224 input, no fine-tuning, no compression or distillation), point-to-point edge-to-server link, N = 200 measured requests per configuration, minimum viable matrix of 10 / 100 Mbit/s uplink × 20 / 100 ms **one-way** propagation delay. The delay is applied in each direction, so the emulated RTT is 40 / 200 ms, on top of the physical link's own RTT (measured separately in the unshaped baseline). The 200 ms emulated RTT lies outside the question's 5–150 ms RTT range; it is kept as Proposal v2 specifies, as a distant-cloud bound, and the crossover map covers 5–150 ms.
 
 **Changes since Proposal v2** (proposed here for instructor approval):
 
@@ -27,6 +27,7 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
     - three link-shaping back ends (app-level, Windows QoS, Linux `tc` htb + `netem`) driven from one config file and a matrix runner;
     - analysis pipeline that produces all three proposed deliverables (payload profile, crossover map, stage / tail-latency breakdown).
 - **Full experiment matrix executed in simulation:** 6 configurations × 4 network profiles × (20 warm-up + 200 measured) requests = **4,800 measured requests**, all logged per request.
+- **First two-laptop run started** (RTX 4060 server, Intel edge laptop over Wi-Fi, full N = 200 matrix). Its results were not available in time for this checkpoint.
 - **Setup documented** for both Windows laptops (static IPs on a direct Ethernet link, firewall rule, power plan), so the physical run needs only cabling and one command.
 
 ## 3. Preliminary results (simulated)
@@ -44,7 +45,7 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
 
 **End-to-end latency (median of 200 requests, ms).** Fastest per profile in bold.
 
-| Configuration | 10 Mbit/s, 40 ms RTT | 10 Mbit/s, 200 ms RTT | 100 Mbit/s, 40 ms RTT | 100 Mbit/s, 200 ms RTT |
+| Configuration | 10 Mbit/s, 20 ms one-way (40 ms RTT) | 10 Mbit/s, 100 ms one-way (200 ms RTT) | 100 Mbit/s, 20 ms one-way (40 ms RTT) | 100 Mbit/s, 100 ms one-way (200 ms RTT) |
 | --- | ---: | ---: | ---: | ---: |
 | Full local | **69.9** | **58.1** | **61.2** | **55.9** |
 | Full offload | 234.9 | 395.5 | 120.5 | 280.0 |
@@ -53,7 +54,7 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
 | Split C, late | 752.2 | 918.5 | 176.4 | 335.0 |
 | Split D, layer4 | 432.6 | 588.1 | 137.3 | 303.1 |
 
-![Figure 1. Median latency per request by stage at 40 ms RTT, simulated run (panels use different scales; the 200 ms RTT profiles look the same with +160 ms of network time).](fig_stages_compact.png){width=88%}
+![Figure 1. Median latency per request by stage at 20 ms one-way delay (40 ms emulated RTT), simulated run (panels use different scales; the 200 ms RTT profiles look the same with +160 ms of network time).](fig_stages_compact.png){width=88%}
 
 **What it shows.**
 
@@ -66,6 +67,7 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
 
 - **Server speed.** The "server" here is a 2-thread CPU (~68 ms for full ResNet-50), not the RTX 4060. This penalises offloading. A what-if map with server time divided by 15 (an assumed GPU speed-up, not a measurement) shows raw offloading overtaking local inference only above ~25 Mbit/s and, at 100 Mbit/s, only below ~40 ms RTT; lossless splits still never win.
 - **Real network behaviour.** App-level shaping paces bytes deterministically; it has no router queue, congestion-window growth or retransmission, so socket-buffer queuing and p99 tail effects (Deliverable 3) are not yet measured.
+- **Tail latency.** With N = 200 the p99 rests on the two slowest requests. 95 % bootstrap intervals are wide in several cells (full local at 10 Mbit/s / 40 ms RTT: p99 = 93.6 ms, interval 91.6–140.8 ms; split A: 3,887 ms, interval 2,972–4,572 ms), so p99 values here are indicative only.
 - **Edge hardware.** Edge compute was measured on a shared server CPU, not the Intel laptop. Full-local latency varies 56–70 ms across profiles although it does not use the network, which indicates contention noise from running two profiles in parallel.
 
 ## 4. Challenges, blockers and risks
@@ -74,10 +76,12 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
 | --- | --- | --- |
 | No `tc`/`netem` on Windows | Packet-level loss, jitter and queuing cannot be emulated natively | App-level shaper for the main matrix; Windows QoS for real TCP pacing; Ubuntu live USB on the edge for `netem` loss/jitter runs |
 | Activations larger than the raw frame | The crossover map may show no split region | Reported as a finding; the added layer4 split and the pooled-vector size bound where a split could win |
-| Two-laptop measurements not yet taken | Current evidence is simulated | Phase 1 run scheduled first (Section 5); scripts and setup are ready |
+| Two-laptop measurements still in progress | Current evidence is simulated | First real run (Wi-Fi) started; baselines on a direct cable next (Section 5) |
 | Windows QoS throttling is driver- and edition-dependent | OS-level rate limit may be ignored | Verify every rate with `iperf3` before measuring; fall back to app-level or Ubuntu |
 | Laptop noise (power states, background tasks) | Inflated tails | Best-performance power plan, AC power, warm-up, background apps closed |
-| One-way delay vs. RTT | Ambiguity in reporting | Convention fixed: profile delay paid each way, RTT = 2 × delay, stated on every figure |
+| One-way delay vs. RTT | Ambiguity in reporting | One convention in config, CLI, figures and text: delay is one-way, applied each way; RTT = 2 × delay + physical RTT |
+| First real run uses Wi-Fi for the edge | Adds base RTT and jitter; contention can blur tails | Report the unshaped Wi-Fi RTT as the physical baseline; repeat key cells on a direct Ethernet cable |
+| p99 from N = 200 | Unstable tail estimates | Report bootstrap intervals; raise N to 1,000 for cells used in the tail analysis |
 
 **Open question for feedback:** is the change to Windows hosts with app-level / QoS shaping acceptable, or should the final results use the Ubuntu-USB `netem` path throughout?
 
@@ -87,16 +91,20 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
 | --- | --- | --- |
 | Nov 21–23 | Cable the laptops, static IPs, verify link with `iperf3`; Phase 1 baselines (full local, full offload) on real hardware | Both baselines logged, N = 200 |
 | Nov 23 | Review checkpoint feedback; adjust scope | Plan updated |
-| Nov 24–28 | Phase 2: full 2 × 2 matrix on the two laptops (app-level shaping), repeated with Windows QoS rate limit; packet captures (Wireshark/pktmon) at 10 Mbit/s; optional Ubuntu-USB `netem` runs with 0.1 % / 1 % loss | All 24 cells measured; traces saved |
-| Nov 29 – Dec 1 | Phase 3: regenerate payload profile, crossover map from real data, stage and p99 analysis; compare to this simulation | Figures final |
+| Nov 24–28 | Phase 2: full 2 × 2 matrix on the two laptops (app-level shaping), repeated with Windows QoS rate limit; packet captures (Wireshark/pktmon) at 10 Mbit/s; N = 1,000 for tail cells | All 24 cells measured; traces saved |
+| Nov 28–30 | Denser measurements at the bandwidth/RTT points the analysis flags on the crossover boundary (`next_measurements.csv`); optional Ubuntu-USB `netem` loss runs | Boundary bracketed by measured points |
+| Nov 30 – Dec 1 | Phase 3: regenerate payload profile, crossover map from real data, stage and p99 analysis; compare to this simulation | Figures final |
 | Dec 2 or Dec 7 | Final presentation | Slides delivered |
 | Dec 8–14 | Final report | Submitted by Dec 14, 3:00 PM |
 
 ## 6. How proposal feedback was considered
 
-> **[KEVIN: replace with the instructor feedback you received on Proposal v1/v2 and how this checkpoint responds to it, e.g. "Feedback asked for X; we did Y (Section N)."]**
-
-Independently of instructor comments, the checkpoint follows Proposal v2's commitments: the minimum viable matrix is kept as proposed (2 bandwidths × 2 delays, three split regimes, two baselines, N = 200), the out-of-scope items (fine-tuning, lossy compression, distillation, multi-node topologies) remain excluded, and the scope was narrowed rather than expanded when the payload result appeared.
+| Instructor feedback on Proposal v2 | Response in this checkpoint |
+| --- | --- |
+| Distinguish round-trip time from one-way propagation delay and document emulation settings consistently. | One convention everywhere: a profile's delay is the **one-way** propagation delay, applied on the uplink and again on the downlink, so emulated RTT = 2 × delay; the physical link's RTT is measured in the unshaped baseline and reported separately. The config file, the client's `--delay-ms` option, the Linux path (which puts the full 2 × delay on edge egress so the RTT matches), every figure axis and every table header now state this. §1 notes that 100 ms one-way gives a 200 ms RTT, outside the question's 5–150 ms range. |
+| Use the initial experiments to identify regions that need additional measurements around the crossover boundaries. | The analysis fits an additive latency model from the measured medians, checks it against every measured cell (4 of 4 winners predicted here) and writes the bandwidth/RTT points on the modelled boundary to `next_measurements.csv`. The extended sweep will sample those points instead of a uniform grid (§5). In this simulation there is no boundary (full local always wins); with a GPU-speed server the what-if boundary sits between about 25 and 100 Mbit/s at RTT below about 40 ms, which is where denser measurements will go. |
+| Be cautious when interpreting p99 latency from a limited number of runs. | Medians are the primary statistic. p99 is now reported with a 95 % bootstrap interval, and §3 shows how wide it is at N = 200. Tail claims will be made only where the interval is narrow, and the cells used for the tail analysis will be re-run with N = 1,000. |
+| For the checkpoint, prioritize establishing the testbed and obtaining reliable baseline measurements before expanding the experiment matrix. | The testbed is complete and unit-tested, and the first hardware step is the unshaped baseline (full local and full offload), which also measures the physical RTT. The matrix was expanded by only one split point, which costs no extra setup; the extended sweep, loss runs and compression remain deferred until after the baselines and this feedback round. |
 
 ## 7. Team contributions
 
