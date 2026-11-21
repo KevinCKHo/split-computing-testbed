@@ -1,0 +1,16 @@
+@page { size: Letter; margin: 0.5in 0.6in; }
+body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 9.2pt; line-height: 1.3; color: #1f1f1e; max-width: none; margin: 0; }
+header#title-block-header { text-align: left; margin-bottom: 6pt; }
+h1.title { font-size: 15pt; margin: 0 0 3pt; line-height: 1.2; }
+p.subtitle { font-size: 10pt; color: #55544f; margin: 0 0 6pt; }
+h2 { font-size: 11pt; margin: 8pt 0 3pt; border-bottom: 1px solid #ddd; padding-bottom: 2pt; break-after: avoid; }
+p { margin: 3pt 0; }
+ul, ol { margin: 3pt 0; padding-left: 18pt; } li { margin: 1pt 0; }
+table { border-collapse: collapse; width: 100%; margin: 4pt 0 6pt; font-size: 8.3pt; }
+th, td { border-bottom: 1px solid #e4e3dd; padding: 1.5pt 5pt; text-align: left; vertical-align: top; }
+th { background: #f4f3ef; }
+td[style*="right"], th[style*="right"] { text-align: right; }
+blockquote { margin: 5pt 0; padding: 4pt 8pt; background: #fff6e5; border-left: 3px solid #eda100; }
+figure { margin: 4pt 0; text-align: center; break-inside: avoid; } figure img { max-width: 92%; }
+figcaption { font-size: 8.5pt; color: #55544f; }
+code { font-size: 8.6pt; } a { color: #1c5cab; }
