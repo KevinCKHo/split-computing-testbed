@@ -1,6 +1,6 @@
 # EE289 checkpoint report
 
-- `checkpoint.pdf`: the file to submit on Canvas (generated from `checkpoint.md`).
+- `checkpoint.docx` / `checkpoint.pdf`: the report (both generated from `checkpoint.md`; docx via `pandoc checkpoint.md -o checkpoint.docx`).
 - `checkpoint.md`: source. Rebuild after edits:
   `pandoc checkpoint.md -s --css style.css --embed-resources -o checkpoint.html`, then print
   `checkpoint.html` to PDF from any browser (Letter, background graphics on).
