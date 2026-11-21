@@ -54,22 +54,22 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
 | Split C, late | 735.3 / 757.4 | 896.2 / 938.9 | 156.8 / 197.7 | 318.9 / 340.2 |
 | Split D, layer4 | 409.2 / 420.7 | 569.7 / 597.0 | 118.6 / 131.9 | 279.7 / 296.4 |
 
-![Figure 1. Median latency per request by stage at 20 ms one-way delay (40 ms emulated RTT), two-laptop testbed. Panels use different scales; the 200 ms RTT profiles look the same with about 160 ms more network time. Server time is end-to-end minus edge compute and network time, so it includes serialization.](fig_stages_real.png){width=88%}
+![Figure 1. Median latency per request by stage at 20 ms one-way delay (40 ms emulated RTT), two-laptop testbed. Panels use different scales; the 200 ms RTT profiles look the same with about 160 ms more network time.](fig_stages_real.png){width=88%}
 
 **What it shows.**
 
 1. **No split and no offload wins any cell.** Full local inference on the Intel edge laptop (37–46 ms) is fastest in all four profiles, and the additive model (edge + server + RTT + bytes × 8 / bandwidth, from the measured medians) predicts that winner in 4 of 4 cells.
 2. **Payload decides the split ranking.** Every lossless split sends 2.7–21× more bytes than the raw frame, so later splits are always faster (D < C < B < A) and none beats raw offloading.
-3. **Network time dominates.** It is 82–98 % of end-to-end latency for every offloaded configuration at 10 Mbit/s and 61–90 % at 100 Mbit/s.
+3. **Network time dominates.** It is 82–98 % of end-to-end latency for every offloaded configuration at 10 Mbit/s and 61–90 % at 100 Mbit/s. Serialization costs 0.2–2.3 ms (largest for split A's 3.2 MB tensor), so it is not a bottleneck.
 4. **Physical link baseline.** ICMP ping to the server timed out (Windows blocks it by default), so the physical RTT was derived from the data instead. Network time minus the emulated RTT and the shaped transfer time leaves 2.6–4.6 ms in every cell: the Wi-Fi/LAN path adds about 3–4 ms per request.
 5. **No region of the studied range favours offloading with this server.** The server's own time for the full model (about 36 ms) plus any RTT of 5 ms or more already exceeds full local (37 ms), and split D's edge compute alone (40–42 ms) exceeds it too.
 6. **The simulation agrees.** The single-machine run gave the same winner in every cell and the same split ranking.
 
 **What it does not yet establish.**
 
-- **Server speed.** About 36 ms server-side for full ResNet-50 is slower than expected for an RTX 4060, and server time falls steadily with later splits (37, 29, 18, 3 ms), which looks more like CPU execution or a low GPU power state. Until CUDA execution is confirmed, the "no offload region" result holds for this server, not for GPUs in general. With the measured 3–4 ms link baseline, offloading would need a server under about 17 ms to win at 100 Mbit/s and 5 ms RTT.
+- **Server speed.** About 36 ms of server time for full ResNet-50 is slower than expected for an RTX 4060, and server time falls steadily with later splits (34, 26, 16, 2 ms for splits A–D), which looks more like CPU execution or a low GPU power state. Until CUDA execution is confirmed, the "no offload region" result holds for this server, not for GPUs in general. With the measured 3–4 ms link baseline, offloading would need a server under about 16 ms to win at 100 Mbit/s and 5 ms RTT.
 - **Real network behaviour.** App-level shaping paces bytes deterministically; it has no router queue, congestion-window growth or retransmission, so socket-buffer queuing (Deliverable 3) is not yet measured.
-- **Tail latency.** p99 is within 1.1× of the median for most network-bound cells but reaches 1.46× for full offload at 100 Mbit/s / 40 ms RTT. The edge was on Wi-Fi, and with N = 200 the p99 rests on the two slowest requests, so these tails are indicative only. (In the simulation, the 95 % bootstrap interval for one p99 of 93.6 ms ran from 91.6 to 140.8 ms.)
+- **Tail latency.** p99 is within 1.1× of the median for most network-bound cells but reaches 1.46× for full offload at 100 Mbit/s / 40 ms RTT. With N = 200 the p99 rests on the two slowest requests, and the 95 % bootstrap intervals show it: full offload at 100 Mbit/s / 40 ms RTT has p99 = 133.6 ms (interval 122.2–143.7 ms), and split C at 100 Mbit/s / 200 ms RTT has 340.2 ms (interval 334.4–510.7 ms). With the edge on Wi-Fi, these tails are indicative only.
 - **Edge noise.** Full local was 46 ms in the first profile and 37 ms in the other three, which suggests warm-up or a CPU frequency ramp rather than any network effect.
 
 ## 4. Challenges, blockers and risks
