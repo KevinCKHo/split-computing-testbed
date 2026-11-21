@@ -16,7 +16,7 @@ two tables in Section 3 from `results/summary.csv`.
 | Checkpoint requirement | Where it is covered | Status |
 | --- | --- | --- |
 | Project title and team member names | Title block | Done |
-| 1. Current question and scope, incl. approved changes | §1 (question, scope, changes table) | Done; changes are marked "proposed for approval" |
+| 1. Current question and scope, incl. approved changes | §1 (question, scope, changes table) | Done; Windows change stated plainly as made, not yet approved |
 | 2. Work completed since Proposal v2 | §2 | Done |
 | 3. At least one preliminary result; what it shows and does not establish | §3: payload table, latency table, Figure 1, "What it shows", "What it does not yet establish" | Done (simulated, labeled) |
 | 4. Challenges, blockers, open questions, risks | §4 risk table + open question | Done |

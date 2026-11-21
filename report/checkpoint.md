@@ -11,7 +11,7 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
 
 **Scope (unchanged).** One pretrained CNN backbone (torchvision ResNet-50, 224 × 224 input, no fine-tuning, no compression or distillation), point-to-point edge-to-server link, N = 200 measured requests per configuration, minimum viable matrix of 10 / 100 Mbit/s uplink × 20 / 100 ms **one-way** propagation delay. The delay is applied in each direction, so the emulated RTT is 40 / 200 ms, on top of the physical link's own RTT (measured separately in the unshaped baseline). The 200 ms emulated RTT lies outside the question's 5–150 ms RTT range; it is kept as Proposal v2 specifies, as a distant-cloud bound, and the crossover map covers 5–150 ms.
 
-**Changes since Proposal v2** (proposed here for instructor approval):
+**Changes since Proposal v2.** The testbed has moved from Linux to Windows on both laptops. This change has not yet been approved; it is reported here so the instructor can review it.
 
 | Change | Reason |
 | --- | --- |
@@ -83,7 +83,7 @@ subtitle: "EE289 Course Project Checkpoint · Fall 2026 · Chih-Kuan Ho (individ
 | First real run uses Wi-Fi for the edge | Adds base RTT and jitter; contention can blur tails | Report the unshaped Wi-Fi RTT as the physical baseline; repeat key cells on a direct Ethernet cable |
 | p99 from N = 200 | Unstable tail estimates | Report bootstrap intervals; raise N to 1,000 for cells used in the tail analysis |
 
-**Open question for feedback:** is the change to Windows hosts with app-level / QoS shaping acceptable, or should the final results use the Ubuntu-USB `netem` path throughout?
+**Open question for feedback:** the testbed now runs on Windows with app-level / QoS shaping. Is that acceptable for the final results, or should they use the Ubuntu-USB `netem` path throughout?
 
 ## 5. Remaining tasks and timeline
 
