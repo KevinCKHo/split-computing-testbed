@@ -114,7 +114,7 @@ Individual project: all work by Chih-Kuan Ho.
 
 ## AI assistance
 
-Substantial AI assistance (Anthropic's Claude) was used to write the testbed code, run the simulation cross-check, produce the figures and draft this report. The two-laptop measurements were run by the author. All design choices, results and text were reviewed by the author, who is responsible for the content.
+AI assistance (Anthropic's Claude) was used to write the testbed code, run the simulation cross-check, produce the figures and draft this report. The two-laptop measurements were run by the author. All design choices, results and text were reviewed by the author, who is responsible for the content.
 
 ## References
 
