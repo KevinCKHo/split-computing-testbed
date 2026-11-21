@@ -21,7 +21,7 @@ configs:
   - {name: split_A_early, mode: split, split: layer1}
   - {name: split_B_mid,   mode: split, split: layer2}
   - {name: split_C_late,  mode: split, split: layer3}
-  # - {name: split_D_layer4, mode: split, split: layer4}   # optional extra late point
+  - {name: split_D_layer4, mode: split, split: layer4}   # extra late point (added after Proposal v2)
 
 # Network profiles (MVS: 2 x 2). delay_ms is one-way, added on edge egress.
 profiles:

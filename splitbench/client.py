@@ -95,12 +95,18 @@ def main() -> None:
     ap.add_argument("--host"); ap.add_argument("--port", type=int)
     ap.add_argument("--no-pretrained", action="store_true")
     ap.add_argument("--threads", type=int, default=0, help="override edge.torch_threads")
+    ap.add_argument("--num-frames", type=int, default=0, help="override num_frames (measured requests per cell)")
+    ap.add_argument("--warmup", type=int, default=-1, help="override warmup requests per cell")
     ap.add_argument("--rate-mbit", type=float, default=0.0, help="app-level uplink rate (0 = off)")
     ap.add_argument("--delay-ms", type=float, default=0.0, help="app-level one-way delay, applied each way")
     a = ap.parse_args()
     shaper = LinkShaper(a.rate_mbit, a.delay_ms)
 
     exp = yaml.safe_load(Path(a.config).read_text())
+    if a.num_frames:
+        exp["num_frames"] = a.num_frames
+    if a.warmup >= 0:
+        exp["warmup"] = a.warmup
     ap_threads = exp["edge"].get("torch_threads", 4)
     torch.set_num_threads(a.threads or ap_threads)
     frames = load_frames(a.frames, exp["num_frames"], exp["input_size"])
