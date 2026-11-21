@@ -18,6 +18,10 @@ NAMES = ["Full local", "Full offload", "Split A (layer1)", "Split B (layer2)", "
 INK, MUTED, GRID = "#1f1f1e", "#6b6a64", "#e4e3dd"
 
 s = pd.read_csv(sys.argv[1])
+if (s.get("serialize_ms_p50", 0) == 0).all():  # summary without a serialize column: server bar includes it
+    STAGES = [x for x in STAGES if x[0] != "serialize_ms_p50"]
+    STAGES = [(c, "Server (incl. serialize)" if c == "server_total_ms_p50" else n) for c, n in STAGES]
+    PALETTE = [PALETTE[0], PALETTE[2], PALETTE[3]]
 profiles = [("bw10_d20", "10 Mbit/s, 20 ms one-way (40 ms RTT)"), ("bw100_d20", "100 Mbit/s, 20 ms one-way (40 ms RTT)")]
 fig, axes = plt.subplots(1, 2, figsize=(7.6, 2.5))
 for ax, (prof, title) in zip(axes, profiles):
@@ -42,5 +46,5 @@ for ax, (prof, title) in zip(axes, profiles):
     ax.grid(axis="x", color=GRID, linewidth=0.7); ax.set_axisbelow(True)
 axes[0].set_yticks(np.arange(len(ORDER))[::-1], NAMES)
 axes[1].set_yticks(np.arange(len(ORDER))[::-1], [])
-axes[0].legend(loc="lower left", bbox_to_anchor=(0, 1.13), ncol=4, fontsize=7.5, frameon=False)
+axes[0].legend(loc="lower left", bbox_to_anchor=(0, 1.13), ncol=len(STAGES), fontsize=7.5, frameon=False)
 fig.subplots_adjust(left=0.15, right=0.98, bottom=0.17, top=0.78, wspace=0.08); fig.savefig(sys.argv[2], dpi=220)
